@@ -22,7 +22,9 @@
     "version:major": "standard-version --release-as major",
     "prepare-patch-release": "run-s build version:patch",
     "prepare-minor-release": "run-s build version:minor",
-    "prepare-major-release": "run-s build version:major"
+    "prepare-major-release": "run-s build version:major",
+    "gpostinstall": "rimraf dist && tsc && cross-os osbuild",
+    "postinstall": "run-s build"
   },
   "repository": {
     "type": "git",
