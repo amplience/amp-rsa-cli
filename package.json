@@ -24,7 +24,7 @@
     "prepare-minor-release": "run-s build version:minor",
     "prepare-major-release": "run-s build version:major",
     "gpostinstall": "rimraf dist && tsc && cross-os osbuild",
-    "postinstall": "run-s build"
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
