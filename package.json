@@ -70,6 +70,7 @@
     "node-fetch": "^3.2.3",
     "promise-retry": "^2.0.1",
     "rimraf": "^3.0.2",
+    "run-s": "^0.0.0",
     "winston": "^3.6.0",
     "yargs": "^17.5.1"
   },
