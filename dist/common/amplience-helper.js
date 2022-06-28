@@ -57,9 +57,9 @@ exports.labels = {
     rest: `generic rest commerce configuration`
 };
 exports.schemas = {
-    config: `https://demostore.amplience.com/site/demostoreconfig`,
+    config: dc_demostore_integration_1.CONSTANTS.demostoreConfigUri,
     automation: `https://demostore.amplience.com/site/automation`,
-    rest: `https://demostore.amplience.com/site/integration/rest`
+    rest: `${dc_demostore_integration_1.CONSTANTS.demostoreIntegrationUri}/rest`
 };
 const baseURL = `https://demostore-catalog.s3.us-east-2.amazonaws.com`;
 const restMap = {};

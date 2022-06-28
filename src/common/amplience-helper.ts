@@ -7,7 +7,7 @@ import { ContentItemHandler } from "../handlers/content-item-handler"
 import { AmplienceContext } from '../handlers/resource-handler';
 import fs from 'fs-extra'
 import { sleep } from "./utils"
-import { OAuthRestClient, paginator, StatusQuery } from "@amplience/dc-demostore-integration"
+import { CONSTANTS, OAuthRestClient, paginator, StatusQuery } from "@amplience/dc-demostore-integration"
 import { OAuthRestClientInterface } from "@amplience/dc-demostore-integration/dist/common/rest-client"
 import { DAMMapping } from "./types"
 import { DAMService } from "../dam/dam-service"
@@ -32,9 +32,9 @@ export const labels: IntegrationConstants = {
 }
 
 export const schemas: IntegrationConstants = {
-    config: `https://demostore.amplience.com/site/demostoreconfig`,
+    config: CONSTANTS.demostoreConfigUri,
     automation: `https://demostore.amplience.com/site/automation`,
-    rest: `https://demostore.amplience.com/site/integration/rest`
+    rest: `${CONSTANTS.demostoreIntegrationUri}/rest`
 }
 
 const baseURL = `https://demostore-catalog.s3.us-east-2.amazonaws.com`

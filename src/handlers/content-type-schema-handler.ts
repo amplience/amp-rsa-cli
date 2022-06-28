@@ -1,6 +1,6 @@
 import { CleanableResourceHandler, ImportContext } from "./resource-handler"
 import { ContentTypeSchema, ValidationLevel } from "dc-management-sdk-js"
-import { getCodecs, paginator, getContentTypeSchema, CommerceAPI, CodecType } from "@amplience/dc-demostore-integration"
+import { getCodecs, paginator, getContentTypeSchema, CommerceAPI, CodecType, CONSTANTS } from "@amplience/dc-demostore-integration"
 import _ from 'lodash'
 import chalk from 'chalk'
 import { loadJsonFromDirectory } from "../helpers/importer"
@@ -81,7 +81,7 @@ export class ContentTypeSchemaHandler extends CleanableResourceHandler {
             throw new Error(`Unable to resolve the body for the following files:\n${errors}`);
         }
 
-        let demostoreConfigSchema = _.find(schemasToInstall, s => s.schemaId === 'https://demostore.amplience.com/site/demostoreconfig')
+        let demostoreConfigSchema = _.find(schemasToInstall, s => s.schemaId === CONSTANTS.demostoreConfigUri)
         if (demostoreConfigSchema?.body) {
             let schemaBody = JSON.parse(demostoreConfigSchema.body)
             schemaBody.properties.commerce.allOf = [{
@@ -89,7 +89,7 @@ export class ContentTypeSchemaHandler extends CleanableResourceHandler {
             }, {
                 properties: {
                     contentType: {
-                        enum: codecs.map(c => c.schema.uri)
+                        enum: codecs.map(c => `${CONSTANTS.demostoreIntegrationUri}/${c.metadata.vendor}`)
                     }
                 }
             }]

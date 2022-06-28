@@ -84,7 +84,7 @@ class ContentTypeSchemaHandler extends resource_handler_1.CleanableResourceHandl
                     .join('\n');
                 throw new Error(`Unable to resolve the body for the following files:\n${errors}`);
             }
-            let demostoreConfigSchema = lodash_1.default.find(schemasToInstall, s => s.schemaId === 'https://demostore.amplience.com/site/demostoreconfig');
+            let demostoreConfigSchema = lodash_1.default.find(schemasToInstall, s => s.schemaId === dc_demostore_integration_1.CONSTANTS.demostoreConfigUri);
             if (demostoreConfigSchema === null || demostoreConfigSchema === void 0 ? void 0 : demostoreConfigSchema.body) {
                 let schemaBody = JSON.parse(demostoreConfigSchema.body);
                 schemaBody.properties.commerce.allOf = [{
@@ -92,7 +92,7 @@ class ContentTypeSchemaHandler extends resource_handler_1.CleanableResourceHandl
                     }, {
                         properties: {
                             contentType: {
-                                enum: codecs.map(c => c.schema.uri)
+                                enum: codecs.map(c => `${dc_demostore_integration_1.CONSTANTS.demostoreIntegrationUri}/${c.metadata.vendor}`)
                             }
                         }
                     }];
