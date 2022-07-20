@@ -58,6 +58,7 @@ export type Mapping = {
 }
 
 export type CMSMapping = AmplienceConfig & {
+    hubId:                  string
     repositories:           Dictionary<string | undefined>
     workflowStates:         Dictionary<string | undefined>
 }
