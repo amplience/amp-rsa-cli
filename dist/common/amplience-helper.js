@@ -47,7 +47,7 @@ const utils_1 = require("./utils");
 const dc_demostore_integration_1 = require("@amplience/dc-demostore-integration");
 const dam_service_1 = require("../dam/dam-service");
 exports.deliveryKeys = {
-    config: `demostore/config/default`,
+    config: `demostore/config`,
     automation: `demostore/automation`,
     rest: `demostore/integration/rest`
 };

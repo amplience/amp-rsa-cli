@@ -66,9 +66,9 @@ const setLogDirectory = (dir) => {
 exports.setLogDirectory = setLogDirectory;
 const logHeadline = (headline) => {
     logger.info('');
-    logger.info('---------------------------------------------------');
+    logger.info(''.padStart(headline.length, '-'));
     logger.info(chalk_1.default.green.bold(headline));
-    logger.info('---------------------------------------------------');
+    logger.info(''.padStart(headline.length, '-'));
     logger.info('');
 };
 exports.logHeadline = logHeadline;

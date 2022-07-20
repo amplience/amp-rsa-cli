@@ -31,14 +31,20 @@ exports.commandOptions = {
         default: `/tmp/demostore/demostore-${(0, nanoid_1.nanoid)()}`,
         middleware: middleware_1.createTempDir
     },
-    matchingSchema: {
+    includeSchema: {
         alias: 'm',
         describe: 'apply to content items matching schema name',
+        type: 'array'
+    },
+    excludeSchema: {
+        alias: 'x',
+        describe: 'schema type to exclude, can use regex',
         type: 'array'
     }
 };
 exports.default = (yargs) => yargs
     .options(exports.commandOptions)
+    .conflicts('includeSchema', 'excludeSchema')
     .middleware([
     exports.commandOptions.tempDir.middleware,
     (c) => __awaiter(void 0, void 0, void 0, function* () {

@@ -98,7 +98,9 @@ class ContentItemHandler extends resource_handler_1.ResourceHandler {
         });
     }
     shouldCleanUpItem(item, context) {
-        return lodash_1.default.includes(context.matchingSchema, item.body._meta.schema) || lodash_1.default.isEmpty(context.matchingSchema);
+        return !(0, utils_1.matchesOneOf)(item.body._meta.schema, context.excludeSchema) ||
+            (0, utils_1.matchesOneOf)(item.body._meta.schema, context.includeSchema) ||
+            lodash_1.default.isEmpty(context.excludeSchema) && lodash_1.default.isEmpty(context.includeSchema);
     }
     cleanup(context) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -127,7 +129,7 @@ class ContentItemHandler extends resource_handler_1.ResourceHandler {
                             contentItem = yield contentItem.related.unarchive();
                         }
                         if (!lodash_1.default.isEmpty(contentItem.body._meta.deliveryKey)) {
-                            contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey}-${(0, nanoid_1.nanoid)()}`;
+                            contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey}-${(0, nanoid_1.nanoid)(10)}`;
                         }
                         contentItem = yield contentItem.related.update(contentItem);
                     }

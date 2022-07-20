@@ -69,7 +69,7 @@ class ContentTypeSchemaHandler extends resource_handler_1.CleanableResourceHandl
             if (!fs_extra_1.default.existsSync(sourceDir)) {
                 return;
             }
-            let codecs = (0, dc_demostore_integration_1.getCodecs)(dc_demostore_integration_1.CodecType.commerce);
+            let codecs = (0, dc_demostore_integration_1.getCodecs)(dc_demostore_integration_1.CodecTypes.commerce);
             let codecSchemas = codecs.map(dc_demostore_integration_1.getContentTypeSchema);
             yield installSchemas(context, codecSchemas);
             const schemas = (0, importer_1.loadJsonFromDirectory)(sourceDir, dc_management_sdk_js_1.ContentTypeSchema);
@@ -92,7 +92,7 @@ class ContentTypeSchemaHandler extends resource_handler_1.CleanableResourceHandl
                     }, {
                         properties: {
                             contentType: {
-                                enum: codecs.map(c => `${dc_demostore_integration_1.CONSTANTS.demostoreIntegrationUri}/${c.metadata.vendor}`)
+                                enum: codecs.map(c => `${dc_demostore_integration_1.CONSTANTS.demostoreIntegrationUri}/${c.vendor}`)
                             }
                         }
                     }];

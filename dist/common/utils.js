@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRandom = exports.formatPercentage = exports.fileIterator = exports.sleep = void 0;
+exports.matchesOneOf = exports.getRandom = exports.formatPercentage = exports.fileIterator = exports.sleep = void 0;
 const lodash_1 = __importDefault(require("lodash"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const handlebars_1 = require("handlebars");
@@ -28,22 +28,27 @@ const fileIterator = (dir, mapping) => ({
                 return yield (0, exports.fileIterator)(path, mapping).iterate(fn);
             }
             else {
-                let contents = {};
-                if (path.endsWith('.hbs')) {
-                    let fileContents = fs_extra_1.default.readFileSync(path, 'utf-8');
-                    const template = (0, handlebars_1.compile)(fileContents);
-                    contents = JSON.parse(template(mapping));
-                    fs_extra_1.default.unlinkSync(path);
-                    path = path.replace('.hbs', '');
-                    fs_extra_1.default.writeJsonSync(path, contents);
+                try {
+                    let contents = {};
+                    if (path.endsWith('.hbs')) {
+                        let fileContents = fs_extra_1.default.readFileSync(path, 'utf-8');
+                        const template = (0, handlebars_1.compile)(fileContents);
+                        contents = JSON.parse(template(mapping));
+                        fs_extra_1.default.unlinkSync(path);
+                        path = path.replace('.hbs', '');
+                        fs_extra_1.default.writeJsonSync(path, contents);
+                    }
+                    else {
+                        contents = fs_extra_1.default.readJsonSync(path);
+                    }
+                    return yield fn({
+                        path,
+                        object: contents
+                    });
                 }
-                else {
-                    contents = fs_extra_1.default.readJsonSync(path);
+                catch (error) {
+                    console.error(`error processing file ${path}: ${error}`);
                 }
-                return yield fn({
-                    path,
-                    object: contents
-                });
             }
         })))));
     })
@@ -63,3 +68,7 @@ const formatPercentage = (a, b) => {
 exports.formatPercentage = formatPercentage;
 const getRandom = (array) => array[Math.floor(Math.random() * (array.length - 1))];
 exports.getRandom = getRandom;
+const matchesOneOf = (text, regexes) => {
+    return (regexes === null || regexes === void 0 ? void 0 : regexes.filter((regex) => new RegExp(regex).test(text)).length) > 0;
+};
+exports.matchesOneOf = matchesOneOf;
