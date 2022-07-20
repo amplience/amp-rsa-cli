@@ -7,7 +7,7 @@ import fs from 'fs-extra'
 import { AmplienceHelper } from '../common/amplience-helper'
 import logger, { logUpdate, logComplete } from "../common/logger"
 import _ from "lodash"
-import { fileIterator } from "../common/utils"
+import { fileIterator, matchesOneOf } from "../common/utils"
 import { nanoid } from "nanoid"
 import DCCLIContentItemHandler from './dc-cli-content-item-handler'
 import { createLog } from '../common/dccli/log-helpers'
@@ -74,7 +74,9 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
     }
 
     shouldCleanUpItem(item: ContentItem, context: CleanupContext): boolean {
-        return _.includes(context.matchingSchema, item.body._meta.schema) || _.isEmpty(context.matchingSchema)
+        return !matchesOneOf(item.body._meta.schema, context.excludeSchema) ||
+                matchesOneOf(item.body._meta.schema, context.includeSchema) ||
+                _.isEmpty(context.excludeSchema) && _.isEmpty(context.includeSchema)
     }
 
     async cleanup(context: CleanupContext): Promise<any> {
@@ -110,7 +112,7 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
                     }
 
                     if (!_.isEmpty(contentItem.body._meta.deliveryKey)) {
-                        contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey}-${nanoid()}`
+                        contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey}-${nanoid(10)}`
                     }
 
                     contentItem = await contentItem.related.update(contentItem)

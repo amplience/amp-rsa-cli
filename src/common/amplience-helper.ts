@@ -20,7 +20,7 @@ type IntegrationConstants = {
 
 // constants
 export const deliveryKeys: IntegrationConstants = {
-    config: `demostore/config/default`,
+    config: `demostore/config`,
     automation: `demostore/automation`,
     rest: `demostore/integration/rest`
 }

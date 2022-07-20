@@ -25,7 +25,8 @@ export type AmplienceArgs = {
         workflowStates:     DemoStoreMapping[]
     }
     hub:                    Hub
-    matchingSchema:         string[]
+    includeSchema:          string[]
+    excludeSchema:          string[]
     amplienceHelper:        AmplienceHelper
 }
 

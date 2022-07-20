@@ -23,9 +23,14 @@ export const commandOptions: Dictionary<any> = {
         default: `/tmp/demostore/demostore-${nanoid()}`,
         middleware: createTempDir
     },
-    matchingSchema: {
+    includeSchema: {
         alias: 'm',
         describe: 'apply to content items matching schema name',
+        type: 'array'
+    },
+    excludeSchema: {
+        alias: 'x',
+        describe: 'schema type to exclude, can use regex',
         type: 'array'
     }
 }
@@ -33,6 +38,7 @@ export const commandOptions: Dictionary<any> = {
 export default (yargs: Argv): Argv =>
     yargs
         .options(commandOptions)
+        .conflicts('includeSchema', 'excludeSchema')
         .middleware([
             commandOptions.tempDir.middleware,
             async (c: LoggableContext) => {

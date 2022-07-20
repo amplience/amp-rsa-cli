@@ -44,9 +44,9 @@ export const setLogDirectory = (dir: string) => {
 
 export const logHeadline = (headline: string) => {
   logger.info('')
-  logger.info('---------------------------------------------------')
+  logger.info(''.padStart(headline.length, '-'))
   logger.info(chalk.green.bold(headline))
-  logger.info('---------------------------------------------------')
+  logger.info(''.padStart(headline.length, '-'))
   logger.info('')
 }
 

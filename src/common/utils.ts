@@ -21,28 +21,32 @@ export const fileIterator = (dir: any, mapping: Mapping) => ({
                 return await fileIterator(path, mapping).iterate(fn)
             }
             else {
-                let contents: any = {}
-                if (path.endsWith('.hbs')) {
-                    let fileContents = fs.readFileSync(path, 'utf-8')
-                    const template = handlebarsCompile(fileContents)
-                    contents = JSON.parse(template(mapping))
-
-                    // delete the hbs template
-                    fs.unlinkSync(path)
-
-                    // update the path and write the json to file
-                    path = path.replace('.hbs', '')
-
-                    fs.writeJsonSync(path, contents)
+                try {
+                    let contents: any = {}
+                    if (path.endsWith('.hbs')) {
+                        let fileContents = fs.readFileSync(path, 'utf-8')
+                        const template = handlebarsCompile(fileContents)
+                        contents = JSON.parse(template(mapping))
+    
+                        // delete the hbs template
+                        fs.unlinkSync(path)
+    
+                        // update the path and write the json to file
+                        path = path.replace('.hbs', '')
+    
+                        fs.writeJsonSync(path, contents)
+                    }
+                    else {
+                        contents = fs.readJsonSync(path)
+                    }
+    
+                    return await fn({
+                        path,
+                        object: contents
+                    })                        
+                } catch (error) {
+                    console.error(`error processing file ${path}: ${error}`)
                 }
-                else {
-                    contents = fs.readJsonSync(path)
-                }
-
-                return await fn({
-                    path,
-                    object: contents
-                })
             }
         }))))
     }
@@ -61,3 +65,7 @@ export const formatPercentage = (a: any[], b: any[]) => {
 }
 
 export const getRandom = <T>(array: T[]): T => array[Math.floor(Math.random() * (array.length - 1))]
+
+export const matchesOneOf = (text: string, regexes: string[]): boolean => {
+    return regexes?.filter((regex: string) => new RegExp(regex).test(text)).length > 0
+}
