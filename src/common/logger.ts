@@ -10,30 +10,35 @@ const decolorize = format((info, opts) => ({
 
 let _log = Console.prototype.log
 Console.prototype.log = function (info: any, callback: any) {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.argv.includes('--json')) {
     _log.call(this, info, callback)
   }
 }
 
 const getLogger = (dir: string) => {
+  let transports: winston.transport[] = [
+    new winston.transports.File({
+      filename: `${dir}/error.log`,
+      level: 'error',
+      format: format.combine(decolorize(), format.simple())
+    }),
+    new winston.transports.File({
+      filename: `${dir}/combined.log`,
+      level: 'debug',
+      format: format.combine(decolorize(), format.simple())
+    }),
+  ]
+
+  if (!process.argv.includes('--json')) {
+    transports.push(new winston.transports.Console({
+      format: winston.format.simple(),
+    }))
+  }
+
   return winston.createLogger({
     level: 'info',
     format: format.simple(),
-    transports: [
-      new winston.transports.File({
-        filename: `${dir}/error.log`,
-        level: 'error',
-        format: format.combine(decolorize(), format.simple())
-      }),
-      new winston.transports.File({
-        filename: `${dir}/combined.log`,
-        level: 'debug',
-        format: format.combine(decolorize(), format.simple())
-      }),
-      new winston.transports.Console({
-        format: winston.format.simple(),
-      })
-    ]
+    transports
   })
 }
 

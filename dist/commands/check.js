@@ -43,6 +43,9 @@ const chalk_1 = __importDefault(require("chalk"));
 const { MultiSelect, AutoComplete } = require('enquirer');
 exports.command = 'check';
 exports.desc = "Check integration content quality";
+function average(nums) {
+    return Math.floor(nums.reduce((a, b) => (a + b)) / nums.length);
+}
 const formatPercentage = (a, b) => {
     let percentage = Math.ceil(100.0 * a.length / b.length);
     let colorFn = chalk_1.default.green;
@@ -68,58 +71,33 @@ const builder = (yargs) => yargs.options({
         describe: 'config locator',
         type: 'array',
         required: true
+    },
+    json: {
+        describe: 'render output in json format',
+        type: 'boolean'
     }
 });
 exports.builder = builder;
-const Operation = operation => {
-    const start = new Date().valueOf();
-    return {
-        do: (status) => __awaiter(void 0, void 0, void 0, function* () {
-            let result = yield operation.execute();
-            return Object.assign(Object.assign({}, operation), { result, duration: `${new Date().valueOf() - start}ms`, status: status(result) });
-        })
-    };
+const trimString = (str) => {
+    return (str === null || str === void 0 ? void 0 : str.substring(0, 4)) + '...';
 };
 const handler = (context) => __awaiter(void 0, void 0, void 0, function* () {
     logger_1.default.info(`testing integrations: `);
     context.locator.forEach(l => logger_1.default.info(`\t${chalk_1.default.cyan(l)}`));
-    yield Promise.all(context.locator.map((locator) => __awaiter(void 0, void 0, void 0, function* () {
+    let results = yield Promise.all(context.locator.map((locator) => __awaiter(void 0, void 0, void 0, function* () {
         let config = yield (0, dc_demostore_integration_1.getContentItemFromConfigLocator)(locator);
         if (config._meta.schema === 'https://demostore.amplience.com/site/demostoreconfig') {
             config = yield (0, dc_demostore_integration_1.getContentItem)(locator.split(':')[0], config.commerce.id);
         }
         let commerceAPI = yield (0, dc_demostore_integration_1.getCommerceAPI)(config);
-        let allProducts = [];
-        let megaMenu = [];
-        let categories = [];
-        let megaMenuOperation = yield Operation({
-            tag: '☯️  get megamenu',
-            execute: () => __awaiter(void 0, void 0, void 0, function* () { return yield commerceAPI.getMegaMenu({}); })
-        }).do((mm) => {
-            megaMenu = mm;
-            let second = lodash_1.default.reduce(megaMenu, (sum, n) => { return lodash_1.default.concat(sum, n.children); }, []);
-            let third = lodash_1.default.reduce(second, (sum, n) => { return lodash_1.default.concat(sum, n.children); }, []);
-            categories = lodash_1.default.concat(megaMenu, second, third);
-            return `[ ${chalk_1.default.green(megaMenu.length)} top level ] [ ${chalk_1.default.green(second.length)} second level ] [ ${chalk_1.default.green(third.length)} third level ]`;
-        });
-        let flattenedCategories = lodash_1.default.uniqBy((0, dc_demostore_integration_1.flattenCategories)(categories), 'id');
-        let categoryOperation = yield Operation({
-            tag: '🧰  get category',
-            execute: () => __awaiter(void 0, void 0, void 0, function* () { return yield commerceAPI.getCategory(flattenedCategories[0]); })
-        }).do((cat) => {
-            return ` has ${chalk_1.default.green(cat.products.length)} products`;
-        });
-        const categoryReadStart = new Date().valueOf();
-        let categoryCount = 0;
-        const loadCategory = (cat) => __awaiter(void 0, void 0, void 0, function* () {
-            let category = yield commerceAPI.getCategory(cat);
-            if (category) {
-                cat.products = category.products;
-                allProducts = lodash_1.default.concat(allProducts, cat.products);
-                categoryCount++;
-            }
-        });
-        yield Promise.all(flattenedCategories.map(loadCategory));
+        let testResults = yield commerceAPI.testIntegration();
+        (0, logger_1.logHeadline)(`test results: ${config._meta.schema}`);
+        let megaMenuResult = testResults.find(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.megaMenu);
+        logger_1.default.info(`${chalk_1.default.bold('☯️  get megamenu')}`);
+        let megaMenu = megaMenuResult === null || megaMenuResult === void 0 ? void 0 : megaMenuResult.results;
+        let second = lodash_1.default.reduce(megaMenu, (sum, n) => { return lodash_1.default.concat(sum, n.children); }, []);
+        let third = lodash_1.default.reduce(second, (sum, n) => { return lodash_1.default.concat(sum, n.children); }, []);
+        logger_1.default.info(`\tgot [ ${chalk_1.default.green(megaMenu.length)} top level ] [ ${chalk_1.default.green(second.length)} second level ] [ ${chalk_1.default.green(third.length)} third level ] in ${chalk_1.default.greenBright(megaMenuResult === null || megaMenuResult === void 0 ? void 0 : megaMenuResult.duration)}ms\n`);
         if (context.showMegaMenu) {
             console.log(`megaMenu ->`);
             lodash_1.default.each(megaMenu, tlc => {
@@ -132,50 +110,31 @@ const handler = (context) => __awaiter(void 0, void 0, void 0, function* () {
                 });
             });
         }
-        allProducts = lodash_1.default.uniqBy(allProducts, 'id');
-        let randomProduct = getRandom(allProducts);
-        let randomProduct2 = getRandom(allProducts);
-        let productOperation = yield Operation({
-            tag: `💰  get product`,
-            execute: () => __awaiter(void 0, void 0, void 0, function* () { return yield commerceAPI.getProduct(randomProduct); })
-        }).do((product) => {
-            return `found product [ ${chalk_1.default.yellow(product.name)} : ${chalk_1.default.green(product.variants[0].listPrice)} ]`;
-        });
-        let productIds = [randomProduct, randomProduct2].map(i => i.id);
-        let productsOperation = yield Operation({
-            tag: '💎  get products',
-            execute: () => __awaiter(void 0, void 0, void 0, function* () { return yield commerceAPI.getProducts({ productIds: productIds.join(',') }); })
-        }).do((products) => {
-            return `got [ ${chalk_1.default.green(products.length)} ] products for [ ${chalk_1.default.gray(productIds.length)} ] productIds`;
-        });
-        let customerGroupOperation = yield Operation({
-            tag: `👨‍👩‍👧‍👦  get customer groups`,
-            execute: () => __awaiter(void 0, void 0, void 0, function* () { return yield commerceAPI.getCustomerGroups({}); })
-        }).do((customerGroups) => {
-            if ('exception' in customerGroups) {
-                return `exception [ ${chalk_1.default.red(customerGroups.exception)} ]`;
-            }
-            else {
-                return `got [ ${chalk_1.default.green(customerGroups.length)} ]`;
-            }
-        });
-        const logOperation = (operation) => {
-            logger_1.default.info(`[ ${chalk_1.default.blueBright(operation.tag)} ] [ ${chalk_1.default.cyan(operation.duration)} ] ${operation.status}`);
-        };
-        (0, logger_1.logHeadline)(`test results: ${config._meta.schema}`);
-        (0, logger_1.logComplete)(`🧰  read ${chalk_1.default.green(categories.length)} categories, ${chalk_1.default.yellow(allProducts.length)} products in ${chalk_1.default.cyan(`${new Date().valueOf() - categoryReadStart} ms`)}`);
-        logOperation(megaMenuOperation);
-        logOperation(categoryOperation);
-        logOperation(productOperation);
-        logOperation(productsOperation);
-        logOperation(customerGroupOperation);
-        let noProductCategories = lodash_1.default.filter(flattenedCategories, cat => { var _a; return ((_a = cat.products) === null || _a === void 0 ? void 0 : _a.length) === 0; });
-        logger_1.default.info(`${formatPercentage(noProductCategories, flattenedCategories)} categories with no products`);
-        let noImageProducts = lodash_1.default.filter(allProducts, prod => lodash_1.default.isEmpty(lodash_1.default.flatten(lodash_1.default.map(prod.variants, 'images'))));
-        logger_1.default.info(`${formatPercentage(noImageProducts, allProducts)} products with no image`);
-        let noPriceProducts = lodash_1.default.filter(allProducts, prod => { var _a; return ((_a = prod.variants[0]) === null || _a === void 0 ? void 0 : _a.listPrice) === '--'; });
-        logger_1.default.info(`${formatPercentage(noPriceProducts, allProducts)} products with no price`);
+        let categoryResults = testResults.filter(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.getCategory);
+        let averageCategoryTime = average(categoryResults.map(cr => cr.duration));
+        logger_1.default.info(chalk_1.default.bold(`🧰  get categories`));
+        logger_1.default.info(`\tread [ ${chalk_1.default.green(categoryResults.length)} ] categories in an average of ${chalk_1.default.blueBright(averageCategoryTime)}ms\n`);
+        let productByProductIdResult = testResults.find(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.getProductById);
+        let productById = productByProductIdResult === null || productByProductIdResult === void 0 ? void 0 : productByProductIdResult.results;
+        logger_1.default.info(chalk_1.default.bold(`💰  product by id [ ${chalk_1.default.magenta(trimString(productByProductIdResult === null || productByProductIdResult === void 0 ? void 0 : productByProductIdResult.arguments))} ]`));
+        logger_1.default.info(`\tgot [ ${chalk_1.default.green(productById.name)} ] in ${chalk_1.default.blueBright(productByProductIdResult === null || productByProductIdResult === void 0 ? void 0 : productByProductIdResult.duration)}ms\n`);
+        let productsByKeywordResult = testResults.find(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.getProductsByKeyword);
+        let productsByKeyword = productsByKeywordResult === null || productsByKeywordResult === void 0 ? void 0 : productsByKeywordResult.results;
+        logger_1.default.info(chalk_1.default.bold(`🔍  products by keyword [ ${chalk_1.default.magenta(productsByKeywordResult === null || productsByKeywordResult === void 0 ? void 0 : productsByKeywordResult.arguments)} ]`));
+        logger_1.default.info(`\tgot [ ${chalk_1.default.green(productsByKeyword.length)} ] matches in ${chalk_1.default.blueBright(productsByKeywordResult === null || productsByKeywordResult === void 0 ? void 0 : productsByKeywordResult.duration)}ms\n`);
+        let productsByProductIdsResult = testResults.find(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.getProductsByProductIds);
+        let productsByProductIds = productsByProductIdsResult === null || productsByProductIdsResult === void 0 ? void 0 : productsByProductIdsResult.results;
+        logger_1.default.info(chalk_1.default.bold(`🛍  products by product ids [ ${chalk_1.default.magenta(trimString(productsByProductIdsResult === null || productsByProductIdsResult === void 0 ? void 0 : productsByProductIdsResult.arguments))} ]`));
+        logger_1.default.info(`\tgot [ ${chalk_1.default.green(productsByProductIds.length)} ] matches in ${chalk_1.default.blueBright(productsByProductIdsResult === null || productsByProductIdsResult === void 0 ? void 0 : productsByProductIdsResult.duration)}ms\n`);
+        let customerGroupsResult = testResults.find(result => result.operationType === dc_demostore_integration_1.CodecTestOperationType.getCustomerGroups);
+        let customerGroups = customerGroupsResult === null || customerGroupsResult === void 0 ? void 0 : customerGroupsResult.results;
+        logger_1.default.info(chalk_1.default.bold(`🤑  customer groups`));
+        logger_1.default.info(`\tgot [ ${chalk_1.default.green(customerGroups.length)} ] groups in ${chalk_1.default.blueBright(customerGroupsResult === null || customerGroupsResult === void 0 ? void 0 : customerGroupsResult.duration)}ms\n`);
+        return testResults;
     })));
+    if (context.json) {
+        console.log(JSON.stringify(results));
+    }
     process.exit(0);
 });
 exports.handler = handler;

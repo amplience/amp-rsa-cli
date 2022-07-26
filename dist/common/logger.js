@@ -34,29 +34,32 @@ const decolorizeString = (str) => str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1
 const decolorize = (0, winston_1.format)((info, opts) => (Object.assign(Object.assign({}, info), { message: info.message && decolorizeString(info.message) })));
 let _log = transports_1.Console.prototype.log;
 transports_1.Console.prototype.log = function (info, callback) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !process.argv.includes('--json')) {
         _log.call(this, info, callback);
     }
 };
 const getLogger = (dir) => {
+    let transports = [
+        new winston_1.default.transports.File({
+            filename: `${dir}/error.log`,
+            level: 'error',
+            format: winston_1.format.combine(decolorize(), winston_1.format.simple())
+        }),
+        new winston_1.default.transports.File({
+            filename: `${dir}/combined.log`,
+            level: 'debug',
+            format: winston_1.format.combine(decolorize(), winston_1.format.simple())
+        }),
+    ];
+    if (!process.argv.includes('--json')) {
+        transports.push(new winston_1.default.transports.Console({
+            format: winston_1.default.format.simple(),
+        }));
+    }
     return winston_1.default.createLogger({
         level: 'info',
         format: winston_1.format.simple(),
-        transports: [
-            new winston_1.default.transports.File({
-                filename: `${dir}/error.log`,
-                level: 'error',
-                format: winston_1.format.combine(decolorize(), winston_1.format.simple())
-            }),
-            new winston_1.default.transports.File({
-                filename: `${dir}/combined.log`,
-                level: 'debug',
-                format: winston_1.format.combine(decolorize(), winston_1.format.simple())
-            }),
-            new winston_1.default.transports.Console({
-                format: winston_1.default.format.simple(),
-            })
-        ]
+        transports
     });
 };
 let logger = getLogger('');
