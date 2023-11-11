@@ -53,7 +53,7 @@
     "adm-zip": "^0.5.9",
     "ajv": "^8.10.0",
     "async": "^3.2.2",
-    "axios": "^0.27.2",
+    "axios": "^1.6.0",
     "chalk": "4.1.2",
     "cli-table": "^0.3.11",
     "dc-management-sdk-js": "^1.18.0",
