@@ -6,10 +6,11 @@ import logger, { logHeadline } from '../common/logger';
 import { ContentTypeSchemaHandler } from '../handlers/content-type-schema-handler';
 import { ContentItemHandler } from '../handlers/content-item-handler';
 import { ExtensionHandler } from '../handlers/extension-handler';
+import { WebhookHandler } from '../handlers/webhook-handler';
 import { SearchIndexHandler } from '../handlers/search-index-handler';
 import { SettingsHandler } from '../handlers/settings-handler';
 
-import { Importable, ImportContext, ResourceHandler } from '../handlers/resource-handler';
+import { Importable, ImportContext } from '../handlers/resource-handler';
 import { copyTemplateFilesToTempDir } from '../helpers/import-helper';
 import { contextHandler } from '../common/middleware';
 import amplienceBuilder from '../common/amplience-builder';
@@ -106,6 +107,7 @@ export const builder = (yargs: Argv): Argv => {
     ])
     .command("indexes", "Import search indexes", {}, importHandler(new SearchIndexHandler()))
     .command("extensions", "Import extensions", {}, importHandler(new ExtensionHandler()))
+    .command("webhooks", "Import webhooks", {}, importHandler(new WebhookHandler()))
     .command("settings", "Import settings", {}, importHandler(new SettingsHandler()))
     .command("types", "Import content types/schemas", {}, importHandler(new ContentTypeSchemaHandler()))
 }
@@ -134,6 +136,9 @@ export const handler = contextHandler(async (context: ImportContext): Promise<vo
 
     // process step 5: npm run automate:indexes
     await importHandler(new SearchIndexHandler())(context)
+
+    // process step 5b: npm run automate:webhooks
+    await importHandler(new WebhookHandler())(context)
 
     if (!context.skipContentImport) {
         logHeadline(`Phase 3: content import`)

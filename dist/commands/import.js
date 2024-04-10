@@ -41,6 +41,7 @@ const logger_1 = __importStar(require("../common/logger"));
 const content_type_schema_handler_1 = require("../handlers/content-type-schema-handler");
 const content_item_handler_1 = require("../handlers/content-item-handler");
 const extension_handler_1 = require("../handlers/extension-handler");
+const webhook_handler_1 = require("../handlers/webhook-handler");
 const search_index_handler_1 = require("../handlers/search-index-handler");
 const settings_handler_1 = require("../handlers/settings-handler");
 const import_helper_1 = require("../helpers/import-helper");
@@ -119,6 +120,7 @@ const builder = (yargs) => {
     ])
         .command("indexes", "Import search indexes", {}, importHandler(new search_index_handler_1.SearchIndexHandler()))
         .command("extensions", "Import extensions", {}, importHandler(new extension_handler_1.ExtensionHandler()))
+        .command("webhooks", "Import webhooks", {}, importHandler(new webhook_handler_1.WebhookHandler()))
         .command("settings", "Import settings", {}, importHandler(new settings_handler_1.SettingsHandler()))
         .command("types", "Import content types/schemas", {}, importHandler(new content_type_schema_handler_1.ContentTypeSchemaHandler()));
 };
@@ -136,6 +138,7 @@ exports.handler = (0, middleware_1.contextHandler)((context) => __awaiter(void 0
     yield importHandler(new settings_handler_1.SettingsHandler())(context);
     yield importHandler(new extension_handler_1.ExtensionHandler())(context);
     yield importHandler(new search_index_handler_1.SearchIndexHandler())(context);
+    yield importHandler(new webhook_handler_1.WebhookHandler())(context);
     if (!context.skipContentImport) {
         (0, logger_1.logHeadline)(`Phase 3: content import`);
         yield importHandler(new content_item_handler_1.ContentItemHandler())(context);
