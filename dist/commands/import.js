@@ -42,7 +42,6 @@ const content_type_schema_handler_1 = require("../handlers/content-type-schema-h
 const content_item_handler_1 = require("../handlers/content-item-handler");
 const extension_handler_1 = require("../handlers/extension-handler");
 const webhook_handler_1 = require("../handlers/webhook-handler");
-const search_index_handler_1 = require("../handlers/search-index-handler");
 const settings_handler_1 = require("../handlers/settings-handler");
 const import_helper_1 = require("../helpers/import-helper");
 const middleware_1 = require("../common/middleware");
@@ -119,7 +118,6 @@ const builder = (yargs) => {
             }
         })
     ])
-        .command("indexes", "Import search indexes", {}, importHandler(new search_index_handler_1.SearchIndexHandler()))
         .command("extensions", "Import extensions", {}, importHandler(new extension_handler_1.ExtensionHandler()))
         .command("webhooks", "Import webhooks", {}, importHandler(new webhook_handler_1.WebhookHandler()))
         .command("settings", "Import settings", {}, importHandler(new settings_handler_1.SettingsHandler()))
@@ -138,7 +136,6 @@ exports.handler = (0, middleware_1.contextHandler)((context) => __awaiter(void 0
     (0, logger_1.logHeadline)(`Phase 2: import/update`);
     yield importHandler(new settings_handler_1.SettingsHandler())(context);
     yield importHandler(new extension_handler_1.ExtensionHandler())(context);
-    yield importHandler(new search_index_handler_1.SearchIndexHandler())(context);
     yield importHandler(new webhook_handler_1.WebhookHandler())(context);
     yield importHandler(new algolia_index_handler_1.AlgoliaIndexHandler())(context);
     if (!context.skipContentImport) {

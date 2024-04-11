@@ -2,7 +2,6 @@
 import { Cleanable, Exportable, Importable, ResourceHandler } from './resource-handler';
 import { EventHandler } from './event-handler';
 import { ExtensionHandler } from './extension-handler';
-import { SearchIndexHandler } from './search-index-handler';
 import { ContentItemHandler } from './content-item-handler';
 import { ContentTypeHandler } from './content-type-handler';
 import { ContentTypeSchemaHandler } from './content-type-schema-handler';
@@ -13,7 +12,6 @@ import _ from 'lodash';
 export const Handlers: ResourceHandler[] = [
     new EventHandler(),
     new ExtensionHandler(),
-    new SearchIndexHandler(),
     new ContentItemHandler(),
     new ContentTypeHandler(),
     new ContentTypeSchemaHandler(),

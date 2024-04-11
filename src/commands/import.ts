@@ -7,7 +7,6 @@ import { ContentTypeSchemaHandler } from '../handlers/content-type-schema-handle
 import { ContentItemHandler } from '../handlers/content-item-handler';
 import { ExtensionHandler } from '../handlers/extension-handler';
 import { WebhookHandler } from '../handlers/webhook-handler';
-import { SearchIndexHandler } from '../handlers/search-index-handler';
 import { SettingsHandler } from '../handlers/settings-handler';
 
 import { Importable, ImportContext } from '../handlers/resource-handler';
@@ -106,7 +105,6 @@ export const builder = (yargs: Argv): Argv => {
             }
         }
     ])
-    .command("indexes", "Import search indexes", {}, importHandler(new SearchIndexHandler()))
     .command("extensions", "Import extensions", {}, importHandler(new ExtensionHandler()))
     .command("webhooks", "Import webhooks", {}, importHandler(new WebhookHandler()))
     .command("settings", "Import settings", {}, importHandler(new SettingsHandler()))
@@ -134,9 +132,6 @@ export const handler = contextHandler(async (context: ImportContext): Promise<vo
 
     // process extensions
     await importHandler(new ExtensionHandler())(context)
-
-    // process indexes
-    await importHandler(new SearchIndexHandler())(context)
 
     // process webhooks
     await importHandler(new WebhookHandler())(context)

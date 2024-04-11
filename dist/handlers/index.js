@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Exportables = exports.Importables = exports.Cleanables = exports.Handlers = void 0;
 const event_handler_1 = require("./event-handler");
 const extension_handler_1 = require("./extension-handler");
-const search_index_handler_1 = require("./search-index-handler");
 const content_item_handler_1 = require("./content-item-handler");
 const content_type_handler_1 = require("./content-type-handler");
 const content_type_schema_handler_1 = require("./content-type-schema-handler");
@@ -16,7 +15,6 @@ const lodash_1 = __importDefault(require("lodash"));
 exports.Handlers = [
     new event_handler_1.EventHandler(),
     new extension_handler_1.ExtensionHandler(),
-    new search_index_handler_1.SearchIndexHandler(),
     new content_item_handler_1.ContentItemHandler(),
     new content_type_handler_1.ContentTypeHandler(),
     new content_type_schema_handler_1.ContentTypeSchemaHandler(),

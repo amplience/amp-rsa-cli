@@ -17,9 +17,9 @@ export type EnvironmentConfig = {
         password: string
     }
     algolia?: {
-        appId: string
-        searchKey: string
-        writeKey: string
+        appId?: string
+        searchKey?: string
+        writeKey?: string
     }
 }
 
@@ -41,8 +41,8 @@ export type LoggableArgs = AmplienceArgs & {
 }
 
 export interface AlgoliaConfig {
-    appId: string;
-    apiKey: string;
+    appId?: string;
+    apiKey?: string;
 }
 export interface AmplienceConfig {
     hub: string;
@@ -108,7 +108,7 @@ export const getMapping = async (context: ImportContext): Promise<Mapping> => {
             repositories: _.zipObject(_.map(repositories, r => r.name!), _.map(repositories, 'id')),
             workflowStates: _.zipObject(_.map(workflowStates, ws => _.camelCase(ws.label)), _.map(workflowStates, 'id'))
         },
-        algolia: context.config?.algolia,
+        algolia: context.environment.algolia,
         dam: await context.amplienceHelper.getDAMMapping(),
         contentMap: context.amplienceHelper.getContentMap()
     }
