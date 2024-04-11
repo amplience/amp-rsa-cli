@@ -119,6 +119,11 @@ const importHandler = (handler: Importable) => async (context: ImportContext): P
 export const handler = contextHandler(async (context: ImportContext): Promise<void> => {
     logger.info(`${chalk.green(command)}: ${desc} started at ${chalk.magentaBright(context.startTime)}`)
 
+    // making sure context config is populated before starting
+    if(!context.config) {
+        context.config = await context.amplienceHelper.getDemoStoreConfig();
+    }
+
     logHeadline(`Phase 1: preparation`)
 
     await copyTemplateFilesToTempDir(context)

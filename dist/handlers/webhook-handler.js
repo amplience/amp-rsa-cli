@@ -70,7 +70,6 @@ class WebhookHandler extends resource_handler_1.CleanableResourceHandler {
                     }
                 }
                 catch (error) {
-                    console.log(JSON.stringify(wh, null, 2));
                     logger_1.default.error(`${prompts_1.prompts.error} importing webhook [ ${wh.label} ]: ${error.message}`);
                 }
             })));
