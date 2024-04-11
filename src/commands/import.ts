@@ -19,6 +19,7 @@ import { CONFIG_PATH } from '../common/environment-manager';
 import axios from 'axios';
 import admZip from 'adm-zip'
 import { sleep } from '../common/utils';
+import { AlgoliaIndexHandler } from '../handlers/algolia-index-handler';
 
 export const command = 'import';
 export const desc = "Import hub data";
@@ -128,22 +129,25 @@ export const handler = contextHandler(async (context: ImportContext): Promise<vo
 
     logHeadline(`Phase 2: import/update`)
 
-    // process step 1: npm run automate:settings
+    // process settings
     await importHandler(new SettingsHandler())(context)
 
-    // process step 4: npm run automate:extensions
+    // process extensions
     await importHandler(new ExtensionHandler())(context)
 
-    // process step 5: npm run automate:indexes
+    // process indexes
     await importHandler(new SearchIndexHandler())(context)
 
-    // process step 5b: npm run automate:webhooks
+    // process webhooks
     await importHandler(new WebhookHandler())(context)
+
+    // process algolia indexes
+    await importHandler(new AlgoliaIndexHandler())(context)
 
     if (!context.skipContentImport) {
         logHeadline(`Phase 3: content import`)
 
-        // process step 6: npm run automate:content-with-republish
+        // process content items
         await importHandler(new ContentItemHandler())(context)
 
         logHeadline(`Phase 4: reentrant import`)
@@ -154,7 +158,7 @@ export const handler = contextHandler(async (context: ImportContext): Promise<vo
         await importHandler(new ContentTypeSchemaHandler())(context)
     }
 
-    // process step 6: generate .env.local file
+    // generate .env.local file
     logHeadline(`Phase 5: generate demostore configuration`)
     await context.amplienceHelper.generateDemoStoreConfig()
 })

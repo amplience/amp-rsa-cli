@@ -52,6 +52,7 @@ const environment_manager_1 = require("../common/environment-manager");
 const axios_1 = __importDefault(require("axios"));
 const adm_zip_1 = __importDefault(require("adm-zip"));
 const utils_1 = require("../common/utils");
+const algolia_index_handler_1 = require("../handlers/algolia-index-handler");
 exports.command = 'import';
 exports.desc = "Import hub data";
 const automationDirPath = `${environment_manager_1.CONFIG_PATH}/dc-demostore-automation`;
@@ -139,6 +140,7 @@ exports.handler = (0, middleware_1.contextHandler)((context) => __awaiter(void 0
     yield importHandler(new extension_handler_1.ExtensionHandler())(context);
     yield importHandler(new search_index_handler_1.SearchIndexHandler())(context);
     yield importHandler(new webhook_handler_1.WebhookHandler())(context);
+    yield importHandler(new algolia_index_handler_1.AlgoliaIndexHandler())(context);
     if (!context.skipContentImport) {
         (0, logger_1.logHeadline)(`Phase 3: content import`);
         yield importHandler(new content_item_handler_1.ContentItemHandler())(context);
