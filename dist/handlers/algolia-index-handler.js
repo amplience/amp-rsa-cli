@@ -81,33 +81,5 @@ class AlgoliaIndexHandler extends resource_handler_1.ResourceHandler {
             };
         });
     }
-    cleanup(context) {
-        return __awaiter(this, void 0, void 0, function* () {
-            (0, logger_1.logSubheading)(`[ cleanup ] algolia indexes`);
-            const { algolia } = context.environment;
-            if (!(algolia === null || algolia === void 0 ? void 0 : algolia.appId) || !algolia.writeKey) {
-                logger_1.default.info(`skipped, algolia environment not configured`);
-                return;
-            }
-            const client = (0, algoliasearch_1.default)(algolia.appId, algolia.writeKey);
-            const indexesFile = `${context.tempDir}/content/indexes/indexes.json`;
-            if (!(0, fs_1.existsSync)(indexesFile)) {
-                logger_1.default.info(`skipped, content/indexes/indexes.json not found`);
-                return;
-            }
-            const indexFixtures = (0, fs_extra_1.readJsonSync)(indexesFile);
-            for (const { indexDetails } of indexFixtures) {
-                try {
-                    (0, logger_1.logUpdate)(`deleting index: ${chalk_1.default.cyanBright(indexDetails.name)}`);
-                    const index = client.initIndex(indexDetails.name);
-                    index.delete();
-                }
-                catch (error) {
-                    logger_1.default.error(`${prompts_1.prompts.error} applying index settings [ ${indexDetails.name} ]: ${error.message}`);
-                }
-            }
-            (0, logger_1.logComplete)(`${this.getDescription()}: [ ${chalk_1.default.green(indexFixtures.length)} deleted ]`);
-        });
-    }
 }
 exports.AlgoliaIndexHandler = AlgoliaIndexHandler;
