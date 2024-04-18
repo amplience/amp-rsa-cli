@@ -12,6 +12,7 @@ const content_type_schema_handler_1 = require("./content-type-schema-handler");
 const settings_handler_1 = require("./settings-handler");
 const webhook_handler_1 = require("./webhook-handler");
 const lodash_1 = __importDefault(require("lodash"));
+const search_index_handler_1 = require("./search-index-handler");
 exports.Handlers = [
     new event_handler_1.EventHandler(),
     new extension_handler_1.ExtensionHandler(),
@@ -19,7 +20,8 @@ exports.Handlers = [
     new content_type_handler_1.ContentTypeHandler(),
     new content_type_schema_handler_1.ContentTypeSchemaHandler(),
     new settings_handler_1.SettingsHandler(),
-    new webhook_handler_1.WebhookHandler()
+    new webhook_handler_1.WebhookHandler(),
+    new search_index_handler_1.SearchIndexHandler()
 ];
 exports.Cleanables = lodash_1.default.filter(exports.Handlers, h => 'cleanup' in h);
 exports.Importables = lodash_1.default.filter(exports.Handlers, h => 'import' in h);

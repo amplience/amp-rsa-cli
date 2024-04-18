@@ -2,7 +2,7 @@ import { Hub } from 'dc-management-sdk-js';
 import _, { Dictionary } from 'lodash';
 import { paginator } from '../common/dccli/paginator'
 import { AmplienceHelper } from './amplience-helper';
-import { ImportContext } from '../handlers/resource-handler';
+import { CleanupContext, ImportContext } from '../handlers/resource-handler';
 
 export type EnvironmentConfig = {
     name: string
@@ -67,6 +67,13 @@ export type ImportArgs = LoggableArgs & {
 export type CleanupArgs = LoggableArgs & {
     skipConfirmation: boolean
     include: string[]
+    all: boolean
+    content: boolean
+    automationDir: string
+    latest: boolean
+    branch: string
+    config: DemoStoreConfiguration
+    openaiKey: string
 }
 
 export type Mapping = {
@@ -94,7 +101,7 @@ export type DemoStoreMapping = {
     to: string
 }
 
-export const getMapping = async (context: ImportContext): Promise<Mapping> => {
+export const getMapping = async (context: ImportContext | CleanupContext): Promise<Mapping> => {
     let repositories = await paginator(context.hub.related.contentRepositories.list)
     let workflowStates = await paginator(context.hub.related.workflowStates.list)
     return {
