@@ -9,6 +9,7 @@ Demonstration Command line interface for Amplience Demo Store.
 Run `demostore --help` to get a list of available commands.
 
 > ⚠️ See [v2.0.0 Changes](docs/v2.0.0-changes.md) if you already have an existing 1.x version of demostore that you wish to update.
+
 > ⚠️ See [v3.0.0 Changes](docs/v3.0.0-changes.md) if you already have an existing 2.x version of demostore that you wish to update.
 
 <!-- MarkdownTOC levels="2,3" autolink="true" -->
