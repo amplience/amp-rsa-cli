@@ -49,8 +49,8 @@ class SearchIndexHandler extends resource_handler_1.ResourceHandler {
         this.icon = '🔎';
     }
     import(context) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             (0, logger_1.logSubheading)(`[ import ] search indexes`);
             const { algolia } = context.environment;
             if (!(algolia === null || algolia === void 0 ? void 0 : algolia.appId) || !algolia.writeKey) {
