@@ -116,10 +116,10 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
   }
 
   async cleanup(context: CleanupContext): Promise<any> {
-    let repositories = await paginator(
+    const repositories = await paginator(
       context.hub.related.contentRepositories.list,
     );
-    let contentTypes = await paginator(context.hub.related.contentTypes.list);
+    const contentTypes = await paginator(context.hub.related.contentTypes.list);
 
     let archiveCount = 0;
     let folderCount = 0;
@@ -150,12 +150,13 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
               contentType,
               "_links.effective-content-type.href",
             );
-            if (!effectiveContentTypeLink) {
+            if (!contentType || !effectiveContentTypeLink) {
               return;
             }
-            let effectiveContentType: any = await context.amplienceHelper.get(
-              effectiveContentTypeLink,
-            );
+            let effectiveContentType: any =
+              await context.amplienceHelper.getEffectiveContentType(
+                contentType,
+              );
             let activePropsType = activeProps.filter(
               (prop) =>
                 effectiveContentType?.properties &&
