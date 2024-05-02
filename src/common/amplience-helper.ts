@@ -7,7 +7,6 @@ import {
   Sortable,
   Hub,
   ContentRepository,
-  ContentType,
 } from "dc-management-sdk-js";
 import logger, { logComplete, logSubheading } from "./logger";
 import chalk from "chalk";
@@ -104,12 +103,6 @@ const AmplienceHelperGenerator = (
 
   const deleteFolder = async (folder: Folder) =>
     await dcClient.delete(`/folders/${folder.id}`);
-
-  const getEffectiveContentType = async (contentType: ContentType) => {
-    return dcClient.get(
-      `/content-types/${contentType.id}/effective-content-type`,
-    );
-  };
 
   const updateContentMap = (item: ContentItem) => {
     contentMap[item.body._meta.deliveryKey] = item;
@@ -264,6 +257,10 @@ const AmplienceHelperGenerator = (
     updateContentMap(item);
   };
 
+  const unpublishContentItem = async (item: ContentItem) => {
+    await dcClient.post(`/content-items/${item.id}/unpublish`);
+  };
+
   const publishAll = async (): Promise<void> => {
     let unpublished = (
       await getContentItems(context.hub, { status: Status.ACTIVE })
@@ -303,7 +300,6 @@ const AmplienceHelperGenerator = (
     getContentItem,
     getDemoStoreConfig,
     generateDemoStoreConfig: updateDemoStoreConfig,
-    getEffectiveContentType,
     getAutomation,
     updateAutomation,
 
@@ -315,6 +311,7 @@ const AmplienceHelperGenerator = (
     getDAMMapping,
 
     publishContentItem,
+    unpublishContentItem,
     publishAll,
 
     deleteFolder,
@@ -335,8 +332,8 @@ export type AmplienceHelper = {
   getContentRepository: (key: string) => Promise<ContentRepository>;
   getContentItemsInRepository: (key: string) => Promise<ContentItem[]>;
   getDAMMapping: () => Promise<DAMMapping>;
-  getEffectiveContentType: (contentType: ContentType) => Promise<any>;
   publishContentItem: (ContentItem: any) => Promise<void>;
+  unpublishContentItem: (ContentItem: any) => Promise<void>;
   deleteFolder: (folder: Folder) => Promise<void>;
   login: () => Promise<Hub>;
 };

@@ -4,12 +4,7 @@ import {
   ImportContext,
   CleanupContext,
 } from "./resource-handler";
-import {
-  ContentItem,
-  ContentRepository,
-  ContentType,
-  Folder,
-} from "dc-management-sdk-js";
+import { ContentItem, ContentRepository, Folder } from "dc-management-sdk-js";
 import { paginator } from "../common/dccli/paginator";
 import chalk from "chalk";
 import { prompts } from "../common/prompts";
@@ -21,11 +16,6 @@ import { nanoid } from "nanoid";
 import DCCLIContentItemHandler from "./dc-cli-content-item-handler";
 import { createLog } from "../common/dccli/log-helpers";
 import { getMapping } from "../common/types";
-
-/**
- * Root level properties to set as false when archiving a content item.
- */
-const activeProps = ["filterActive", "active"];
 
 export class ContentItemHandler extends ResourceHandler implements Cleanable {
   sortPriority = 0.03;
@@ -121,10 +111,11 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
     );
     const contentTypes = await paginator(context.hub.related.contentTypes.list);
 
+    let unpublishCount = 0;
     let archiveCount = 0;
     let folderCount = 0;
 
-    // First pass, update active flags and delivery keys
+    // unpublish content items
     await Promise.all(
       repositories.map(async (repository: ContentRepository) => {
         logUpdate(
@@ -139,52 +130,10 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
 
         await Promise.all(
           contentItems.map(async (contentItem: ContentItem) => {
-            let needsUpdate = false;
-            let contentType = _.find(
-              contentTypes,
-              (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
-            );
-
-            // get the effective content type
-            let effectiveContentTypeLink = _.get(
-              contentType,
-              "_links.effective-content-type.href",
-            );
-            if (!contentType || !effectiveContentTypeLink) {
-              return;
-            }
-            let effectiveContentType: any =
-              await context.amplienceHelper.getEffectiveContentType(
-                contentType,
-              );
-            let activePropsType = activeProps.filter(
-              (prop) =>
-                effectiveContentType?.properties &&
-                effectiveContentType.properties[prop]?.type === "boolean",
-            );
-
-            // Updating active flags
-            if (activePropsType.length > 0) {
-              for (const prop of activePropsType) {
-                contentItem.body[prop] = false;
-                needsUpdate = true;
-              }
-            }
-
-            // Updating delivery key
-            if (contentItem.body._meta.deliveryKey?.length > 0) {
-              if (!_.isEmpty(contentItem.body._meta.deliveryKey)) {
-                contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey.slice(0, 128)}-${nanoid()}`;
-                needsUpdate = true;
-              }
-            }
-
-            if (needsUpdate) {
-              logUpdate(`updating content item active flag / delivery key`);
-              contentItem = await contentItem.related.update(contentItem);
-              await sleep(1000);
-              logUpdate(`publishing updates`);
-              await context.amplienceHelper.publishContentItem(contentItem);
+            if (_.has(contentItem, "_links.unpublish.href")) {
+              logUpdate(`unpublishing content item`);
+              await context.amplienceHelper.unpublishContentItem(contentItem);
+              unpublishCount++;
               await sleep(1000);
             }
           }),
@@ -192,7 +141,7 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
       }),
     );
 
-    // Second pass, archive content and remove folders
+    // Update delivery keys
     await Promise.all(
       repositories.map(async (repository: ContentRepository) => {
         logUpdate(
@@ -212,12 +161,42 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
               (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
             );
 
-            // get the effective content type
-            let effectiveContentTypeLink = _.get(
-              contentType,
-              "_links.effective-content-type.href",
+            if (!_.has(contentType, "_links.effective-content-type.href")) {
+              return;
+            }
+
+            // Updating delivery key
+            if (!_.isEmpty(contentItem.body._meta.deliveryKey)) {
+              contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey.slice(0, 128)}-${nanoid()}`;
+              logUpdate(`updating content item delivery key`);
+              contentItem = await contentItem.related.update(contentItem);
+              await sleep(1000);
+            }
+          }),
+        );
+      }),
+    );
+
+    // Archive content and remove folders
+    await Promise.all(
+      repositories.map(async (repository: ContentRepository) => {
+        logUpdate(
+          `${prompts.archive} content items in repository ${chalk.cyanBright(repository.name)}...`,
+        );
+        let contentItems: ContentItem[] = _.filter(
+          await paginator(repository.related.contentItems.list, {
+            status: "ACTIVE",
+          }),
+          (ci) => this.shouldCleanUpItem(ci, context),
+        );
+
+        await Promise.all(
+          contentItems.map(async (contentItem: ContentItem) => {
+            let contentType = _.find(
+              contentTypes,
+              (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
             );
-            if (!effectiveContentTypeLink) {
+            if (!_.has(contentType, "_links.effective-content-type.href")) {
               return;
             }
             archiveCount++;
@@ -244,7 +223,7 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
     );
 
     logComplete(
-      `${this.getDescription()}: [ ${chalk.yellow(archiveCount)} items archived ] [ ${chalk.red(folderCount)} folders deleted ]`,
+      `${this.getDescription()}: [ ${chalk.yellow(unpublishCount)} items unpublished ] [ ${chalk.yellow(archiveCount)} items archived ] [ ${chalk.red(folderCount)} folders deleted ]`,
     );
   }
 }
