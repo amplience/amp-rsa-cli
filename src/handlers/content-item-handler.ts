@@ -16,6 +16,9 @@ import { nanoid } from "nanoid";
 import DCCLIContentItemHandler from "./dc-cli-content-item-handler";
 import { createLog } from "../common/dccli/log-helpers";
 import { getMapping } from "../common/types";
+import pThrottle from "p-throttle";
+
+const ACTIVE_PROPS = ["filterActive", "active"];
 
 export class ContentItemHandler extends ResourceHandler implements Cleanable {
   sortPriority = 0.03;
@@ -106,6 +109,13 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
   }
 
   async cleanup(context: CleanupContext): Promise<any> {
+    const publishingThrottle = pThrottle({
+      limit: 1,
+      interval: 600,
+    });
+    const throttledUnpublish = publishingThrottle(
+      context.amplienceHelper.unpublishContentItem,
+    );
     const repositories = await paginator(
       context.hub.related.contentRepositories.list,
     );
@@ -115,112 +125,115 @@ export class ContentItemHandler extends ResourceHandler implements Cleanable {
     let archiveCount = 0;
     let folderCount = 0;
 
-    // unpublish content items
-    await Promise.all(
-      repositories.map(async (repository: ContentRepository) => {
-        logUpdate(
-          `${prompts.archive} content items in repository ${chalk.cyanBright(repository.name)}...`,
-        );
-        let contentItems: ContentItem[] = _.filter(
-          await paginator(repository.related.contentItems.list, {
-            status: "ACTIVE",
-          }),
-          (ci) => this.shouldCleanUpItem(ci, context),
-        );
+    for (const repository of repositories) {
+      logUpdate(
+        `${prompts.cleanup} repository ${chalk.cyanBright(repository.name)}...`,
+      );
+      let contentItems: ContentItem[] = _.filter(
+        await paginator(repository.related.contentItems.list, {
+          status: "ACTIVE",
+        }),
+        (ci) => this.shouldCleanUpItem(ci, context),
+      );
+      logUpdate(
+        `Found ${contentItems?.length} content items in repository ${chalk.cyanBright(repository.name)} to clean`,
+      );
+      await Promise.all(
+        contentItems.map(async (contentItem: ContentItem) => {
+          logUpdate(
+            `cleaning content item: ${contentItem.id} (repository: ${repository.name})`,
+          );
+          let needsUpdate = false;
+          // Unpublish content item if published
+          if (_.has(contentItem, "_links.unpublish.href")) {
+            logUpdate(
+              `unpublishing content item: ${contentItem.id} (repository: ${repository.name})`,
+            );
+            await throttledUnpublish(contentItem);
+            await context.amplienceHelper.waitUntilUnpublished(contentItem);
+            unpublishCount++;
+          }
 
-        await Promise.all(
-          contentItems.map(async (contentItem: ContentItem) => {
-            if (_.has(contentItem, "_links.unpublish.href")) {
-              logUpdate(`unpublishing content item`);
-              await context.amplienceHelper.unpublishContentItem(contentItem);
-              unpublishCount++;
-              await sleep(1000);
-            }
-          }),
-        );
-      }),
-    );
+          let contentType = _.find(
+            contentTypes,
+            (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
+          );
 
-    // Update delivery keys
-    await Promise.all(
-      repositories.map(async (repository: ContentRepository) => {
-        logUpdate(
-          `${prompts.archive} content items in repository ${chalk.cyanBright(repository.name)}...`,
-        );
-        let contentItems: ContentItem[] = _.filter(
-          await paginator(repository.related.contentItems.list, {
-            status: "ACTIVE",
-          }),
-          (ci) => this.shouldCleanUpItem(ci, context),
-        );
-
-        await Promise.all(
-          contentItems.map(async (contentItem: ContentItem) => {
-            let contentType = _.find(
-              contentTypes,
-              (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
+          if (
+            contentType &&
+            _.has(contentType, "_links.effective-content-type.href")
+          ) {
+            logUpdate(
+              `settings active props for content item: ${contentItem.id} (repository: ${repository.name})`,
+            );
+            let effectiveContentType: any =
+              await context.amplienceHelper.getEffectiveContentType(
+                contentType,
+              );
+            let activePropsType = ACTIVE_PROPS.filter(
+              (prop) =>
+                effectiveContentType?.properties[prop]?.type === "boolean",
             );
 
-            if (!_.has(contentType, "_links.effective-content-type.href")) {
-              return;
+            // Updating active flags
+            if (activePropsType.length > 0) {
+              for (const prop of activePropsType) {
+                contentItem.body[prop] = false;
+                needsUpdate = true;
+              }
             }
+          }
 
-            // Updating delivery key
-            if (!_.isEmpty(contentItem.body._meta.deliveryKey)) {
-              contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey.slice(0, 128)}-${nanoid()}`;
-              logUpdate(`updating content item delivery key`);
-              contentItem = await contentItem.related.update(contentItem);
-              await sleep(1000);
-            }
-          }),
-        );
-      }),
-    );
+          // Modify deliveryKey to be unique if present
+          if (!_.isEmpty(contentItem.body._meta.deliveryKey)) {
+            logUpdate(
+              `modifying delivery key for content item: ${contentItem.id} (repository: ${repository.name})`,
+            );
+            contentItem.body._meta.deliveryKey = `${contentItem.body._meta.deliveryKey.slice(0, 128)}-${nanoid()}`;
+            needsUpdate = true;
+          }
 
-    // Archive content and remove folders
-    await Promise.all(
-      repositories.map(async (repository: ContentRepository) => {
+          if (needsUpdate) {
+            logUpdate(
+              `updating content item: ${contentItem.id} (repository: ${repository.name})`,
+            );
+            contentItem = await contentItem.related.update(contentItem);
+            await sleep(1000);
+          }
+
+          // Archive content item
+          logUpdate(
+            `archiving content item: ${contentItem.id} (repository: ${repository.name})`,
+          );
+          await contentItem.related.archive();
+          archiveCount++;
+          _.remove(
+            context.automation?.contentItems,
+            (ci) => contentItem.id === ci.to,
+          );
+        }),
+      );
+
+      const cleanupFolder = async (folder: Folder) => {
+        let subfolders = await paginator(folder.related.folders.list);
+        await Promise.all(subfolders.map(cleanupFolder));
         logUpdate(
-          `${prompts.archive} content items in repository ${chalk.cyanBright(repository.name)}...`,
+          `${prompts.delete} folder ${folder.name} (repository: ${repository.name})`,
         );
-        let contentItems: ContentItem[] = _.filter(
-          await paginator(repository.related.contentItems.list, {
-            status: "ACTIVE",
-          }),
-          (ci) => this.shouldCleanUpItem(ci, context),
-        );
+        folderCount++;
+        return await context.amplienceHelper.deleteFolder(folder);
+      };
 
-        await Promise.all(
-          contentItems.map(async (contentItem: ContentItem) => {
-            let contentType = _.find(
-              contentTypes,
-              (ct) => ct.contentTypeUri === contentItem.body._meta.schema,
-            );
-            if (!_.has(contentType, "_links.effective-content-type.href")) {
-              return;
-            }
-            archiveCount++;
-            await contentItem.related.archive();
-            _.remove(
-              context.automation?.contentItems,
-              (ci) => contentItem.id === ci.to,
-            );
-          }),
-        );
-
-        const cleanupFolder = async (folder: Folder) => {
-          let subfolders = await paginator(folder.related.folders.list);
-          await Promise.all(subfolders.map(cleanupFolder));
-          logUpdate(`${prompts.delete} folder ${folder.name}`);
-          folderCount++;
-          return await context.amplienceHelper.deleteFolder(folder);
-        };
-
-        // also clean up folders
-        let folders = await paginator(repository.related.folders.list);
-        await Promise.all(folders.map(cleanupFolder));
-      }),
-    );
+      // clean up folders
+      let folders = await paginator(repository.related.folders.list);
+      logUpdate(
+        `Cleaning up folders in repository ${chalk.cyanBright(repository.name)}...`,
+      );
+      await Promise.all(folders.map(cleanupFolder));
+      logUpdate(
+        `${prompts.cleanup} repository ${chalk.cyanBright(repository.name)} complete`,
+      );
+    }
 
     logComplete(
       `${this.getDescription()}: [ ${chalk.yellow(unpublishCount)} items unpublished ] [ ${chalk.yellow(archiveCount)} items archived ] [ ${chalk.red(folderCount)} folders deleted ]`,

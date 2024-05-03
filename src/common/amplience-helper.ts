@@ -7,6 +7,7 @@ import {
   Sortable,
   Hub,
   ContentRepository,
+  ContentType,
 } from "dc-management-sdk-js";
 import logger, { logComplete, logSubheading } from "./logger";
 import chalk from "chalk";
@@ -44,12 +45,17 @@ let contentMap: Dictionary<ContentItem> = {};
 const AmplienceHelperGenerator = (
   context: AmplienceContext,
 ): AmplienceHelper => {
+  const dcSdkClient = new DynamicContent({
+    client_id: context.environment.dc.clientId,
+    client_secret: context.environment.dc.clientSecret,
+  });
+
   const dcClient = new DCClient(
     {
       clientId: context.environment.dc.clientId,
       clientSecret: context.environment.dc.clientSecret,
     },
-    { apiUrl: process.env.API_URL, authUrl: process.env.AUTH_URL },
+    { authUrl: process.env.AUTH_URL },
   );
 
   const getContentItems = async (
@@ -82,12 +88,7 @@ const AmplienceHelperGenerator = (
     await timedBlock("login", async () => {
       try {
         // log in to Dynamic Content
-        let client = new DynamicContent({
-          client_id: context.environment.dc.clientId,
-          client_secret: context.environment.dc.clientSecret,
-        });
-
-        let hub: Hub = await client.hubs.get(context.environment.dc.hubId);
+        let hub: Hub = await dcSdkClient.hubs.get(context.environment.dc.hubId);
         if (!hub) {
           throw new Error(`hubId not found: ${context.environment.dc.hubId}`);
         }
@@ -102,7 +103,11 @@ const AmplienceHelperGenerator = (
     });
 
   const deleteFolder = async (folder: Folder) =>
-    await dcClient.delete(`/folders/${folder.id}`);
+    await dcClient.deleteFolder(folder);
+
+  const getEffectiveContentType = async (contentType: ContentType) => {
+    return dcClient.getEffectiveContentType(contentType);
+  };
 
   const updateContentMap = (item: ContentItem) => {
     contentMap[item.body._meta.deliveryKey] = item;
@@ -253,12 +258,12 @@ const AmplienceHelperGenerator = (
   };
 
   const publishContentItem = async (item: ContentItem) => {
-    await dcClient.post(`/content-items/${item.id}/publish`);
+    await dcClient.publish(item);
     updateContentMap(item);
   };
 
   const unpublishContentItem = async (item: ContentItem) => {
-    await dcClient.post(`/content-items/${item.id}/unpublish`);
+    await dcClient.unpublish(item);
   };
 
   const publishAll = async (): Promise<void> => {
@@ -296,6 +301,39 @@ const AmplienceHelperGenerator = (
     );
   };
 
+  const waitUntilUnpublished = async (contentItem: ContentItem) => {
+    logUpdate(`waiting for content item ${contentItem.id} to be unpublished`);
+    const MAX_ATTEMPTS = 10;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      await sleep(4000);
+      logUpdate(
+        `checking content item ${contentItem.id} unpublished state (attempt=${i})`,
+      );
+      const item = (await dcSdkClient.contentItems.get(
+        contentItem.id,
+      )) as ContentItem & {
+        lastPublishedDate: number;
+        lastUnpublishedDate: number;
+      };
+      if (!item.lastPublishedDate) {
+        logUpdate(
+          `content item ${contentItem.id} not published (attempt=${i})`,
+        );
+        return; // item has never been published
+      }
+      if (
+        item.lastUnpublishedDate &&
+        item.lastPublishedDate &&
+        item.lastUnpublishedDate >= item.lastPublishedDate
+      ) {
+        logUpdate(
+          `content item ${contentItem.id} is unpublished (attempt=${i})`,
+        );
+        return; // item is unpublished;
+      }
+    }
+  };
+
   return {
     getContentItem,
     getDemoStoreConfig,
@@ -307,6 +345,7 @@ const AmplienceHelperGenerator = (
     getContentMap,
     getContentRepository,
     getContentItemsInRepository,
+    getEffectiveContentType,
 
     getDAMMapping,
 
@@ -316,6 +355,8 @@ const AmplienceHelperGenerator = (
 
     deleteFolder,
     login,
+
+    waitUntilUnpublished,
   };
 };
 export default AmplienceHelperGenerator;
@@ -331,9 +372,11 @@ export type AmplienceHelper = {
   getContentMap: () => Dictionary<string>;
   getContentRepository: (key: string) => Promise<ContentRepository>;
   getContentItemsInRepository: (key: string) => Promise<ContentItem[]>;
+  getEffectiveContentType: (contentType: ContentType) => Promise<ContentType>;
   getDAMMapping: () => Promise<DAMMapping>;
   publishContentItem: (ContentItem: any) => Promise<void>;
   unpublishContentItem: (ContentItem: any) => Promise<void>;
   deleteFolder: (folder: Folder) => Promise<void>;
   login: () => Promise<Hub>;
+  waitUntilUnpublished: (contentItem: ContentItem) => Promise<void>;
 };

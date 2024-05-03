@@ -1,6 +1,26 @@
-import { AuthHeaderProvider } from "./auth/auth-header-provider";
-import { Oauth2AuthHeaderProvider } from "./auth/oauth2-auth-header-provider";
-import { HttpClient, HttpMethod } from "./http-client";
+import unfetch from "isomorphic-unfetch";
+const fetch = require("fetch-retry")(unfetch, {
+  retryOn: [429, 500, 501, 502, 503, 504],
+  retries: 3,
+  retryDelay: (attempt) => Math.pow(2, attempt) * 1000 * (Math.random() + 0.5),
+});
+
+import {
+  AxiosHttpClient,
+  ContentItem,
+  ContentType,
+  Folder,
+  Oauth2AuthHeaderProvider,
+} from "dc-management-sdk-js";
+import { AuthHeaderProvider } from "dc-management-sdk-js/build/main/lib/auth/AuthHeaderProvider";
+
+export enum HttpMethod {
+  GET = "GET",
+  POST = "POST",
+  PUT = "PUT",
+  PATCH = "PATCH",
+  DELETE = "DELETE",
+}
 
 export interface DCClientCredentials {
   clientId: string;
@@ -8,74 +28,109 @@ export interface DCClientCredentials {
 }
 
 export interface DCClientOptions {
-  apiUrl?: string;
   authUrl?: string;
 }
 
 export class DCClient {
   private clientId: string;
   private clientSecret: string;
-  private apiUrl: string;
-  private httpClient: HttpClient;
   private authHeaderProvider: AuthHeaderProvider;
 
   constructor(
     { clientId, clientSecret }: DCClientCredentials,
-    { apiUrl, authUrl }: DCClientOptions,
+    { authUrl }: DCClientOptions,
   ) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
-    this.apiUrl = apiUrl || "https://api.amplience.net/v2/content";
 
-    this.httpClient = new HttpClient();
-
+    const axiosClient = new AxiosHttpClient({});
     this.authHeaderProvider = new Oauth2AuthHeaderProvider(
-      { clientId: this.clientId, clientSecret: this.clientSecret },
-      { authUrl },
-      this.httpClient,
+      { client_id: this.clientId, client_secret: this.clientSecret },
+      { ...(authUrl ? { authUrl } : {}) },
+      axiosClient,
     );
   }
 
-  async get(path: string) {
-    return this.invoke({ path, method: HttpMethod.GET });
-  }
+  async getEffectiveContentType(contentType: ContentType) {
+    const effectiveContentTypeLink = (contentType._links as any)[
+      "effective-content-type"
+    ];
 
-  async post(path: string, body?: BodyInit | null | undefined) {
-    return this.invoke({ path, method: HttpMethod.POST, body });
-  }
-
-  async delete(path: string) {
-    return this.invoke({ path, method: HttpMethod.DELETE });
-  }
-
-  protected async invoke({
-    path,
-    method,
-    body,
-  }: {
-    path: string;
-    method: HttpMethod;
-    body?: BodyInit | null | undefined;
-  }) {
-    const authHeader = await this.authHeaderProvider.getAuthHeader();
-    const fullUrl = `${this.apiUrl}/${path.replace(/^\/+/, "")}`;
-    const response = await this.httpClient.request({
-      url: fullUrl,
-      method,
-      headers: {
-        Authorization: authHeader,
-      },
-      ...(body ? { body } : {}),
-    });
-
-    if (!response.ok) {
+    if (!effectiveContentTypeLink) {
       throw new Error(
-        `Request failed with status code ${response.status}: ${method} - ${fullUrl}`,
+        "Unable to get effective content type - link not available.",
       );
     }
 
-    const text = await response.text();
-    // Return an empty object if the 2xx response has no data
-    return text ? JSON.parse(text) : {};
+    const response = await this.fetch(
+      effectiveContentTypeLink.href,
+      HttpMethod.GET,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Publish failed with status code ${response.status}: ${effectiveContentTypeLink.href}`,
+      );
+    }
+
+    return response.json();
+  }
+
+  async publish(item: ContentItem): Promise<void> {
+    const publishLink = (item._links as any)["publish"];
+
+    if (!publishLink) {
+      throw new Error("Cannot publish the item - link not available.");
+    }
+
+    const response = await this.fetch(publishLink.href, HttpMethod.POST);
+
+    if (!response.ok) {
+      throw new Error(
+        `Publish failed with status code ${response.status}: ${publishLink.href}`,
+      );
+    }
+  }
+
+  async unpublish(item: ContentItem): Promise<void> {
+    const unpublishLink = (item._links as any)["unpublish"];
+
+    if (!unpublishLink) {
+      throw new Error("Cannot unpublish the item - link not available.");
+    }
+
+    const response = await this.fetch(unpublishLink.href, HttpMethod.POST);
+
+    if (!response.ok) {
+      throw new Error(
+        `Unpublish failed with status code ${response.status}: ${unpublishLink.href}`,
+      );
+    }
+  }
+
+  async deleteFolder(folder: Folder): Promise<void> {
+    const deleteFolderLink = (folder._links as any)["delete-folder"];
+
+    if (!deleteFolderLink) {
+      throw new Error("Cannot delete the folder - link not available.");
+    }
+
+    const response = await this.fetch(deleteFolderLink.href, HttpMethod.DELETE);
+
+    if (!response.ok) {
+      throw new Error(
+        `Delete folder failed with status code ${response.status}: ${deleteFolderLink.href}`,
+      );
+    }
+  }
+
+  private async fetch(href: string, method: string): Promise<Response> {
+    const authHeader = await this.authHeaderProvider.getAuthHeader();
+    return await fetch(href, {
+      method: method,
+      headers: {
+        Authorization: authHeader,
+      },
+    });
   }
 }
