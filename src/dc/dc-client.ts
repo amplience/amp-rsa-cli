@@ -69,7 +69,7 @@ export class DCClient {
 
     if (!response.ok) {
       throw new Error(
-        `Publish failed with status code ${response.status}: ${effectiveContentTypeLink.href}`,
+        `Failed to get effective content type with status code ${response.status}: ${effectiveContentTypeLink.href}`,
       );
     }
 
