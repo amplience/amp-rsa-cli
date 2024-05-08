@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - uses: google-github-actions/release-please-action@v4
+        id: release
         with:
           release-type: node
           package-name: dc-demostore-cli
-          token: ${{ secrets.GH_REPO_ACCESS }}
 
       - uses: actions/checkout@v4
         if: ${{ steps.release.outputs.release_created }}
